@@ -16,7 +16,9 @@ public class TranslatorService {
 
     public String translate(String text, String from, String to){
         RestTemplate restTemplate = new RestTemplate();
-        String url = endpoint + path + "&from=" + from + "&to=" + to;
+
+        // Si 'from' es null o vacío, no lo incluimos en la URL
+        String url = endpoint + path + (from != null && !from.isBlank() ? "&from=" + from : "") + "&to=" + to;
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -26,26 +28,31 @@ public class TranslatorService {
         List<Map<String, String>> body = List.of(Map.of("Text", text));
         HttpEntity<List<Map<String, String>>> entity = new HttpEntity<>(body, headers);
 
-        ResponseEntity<List> response = restTemplate.exchange(
-                url,
-                HttpMethod.POST,
-                entity,
-                List.class
-        );
+        try {
+            ResponseEntity<List> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.POST,
+                    entity,
+                    List.class
+            );
 
-        if (response.getBody() == null || response.getBody().isEmpty()) {
-            return "Error: Respuesta vacía.";
+            if (response.getBody() == null || response.getBody().isEmpty()) {
+                return "Error: Respuesta vacía.";
+            }
+
+            Map<String, Object> first = (Map<String, Object>) response.getBody().get(0);
+            Object translationsObj = first.get("translations");
+
+            if (translationsObj instanceof List<?> translationsList && !translationsList.isEmpty()) {
+                Map<String, String> translationMap = (Map<String, String>) translationsList.get(0);
+                return translationMap.get("text");
+            }
+
+            return "Error: No se encontró traducción.";
+        } catch (Exception e) {
+            return "Error en la traducción: " + e.getMessage();
         }
-
-        Map<String, Object> first = (Map<String, Object>) response.getBody().get(0);
-
-        Object translationsObj = first.get("translations"); // ✅ minúscula
-        if (translationsObj instanceof List<?> translationsList && !translationsList.isEmpty()) {
-            Map<String, String> translationMap = (Map<String, String>) translationsList.get(0);
-            return translationMap.get("text");
-        }
-
-        return "Error: No se encontró traducción.";
     }
+
 
 }

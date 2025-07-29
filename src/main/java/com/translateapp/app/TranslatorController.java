@@ -15,7 +15,7 @@ public class TranslatorController {
     @GetMapping
     public String translate(
             @RequestParam String text,
-            @RequestParam String from,
+            @RequestParam(required = false) String from,
             @RequestParam String to
     ){
         return translatorService.translate(text,from,to);
